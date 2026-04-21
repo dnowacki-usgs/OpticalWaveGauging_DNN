@@ -64,15 +64,20 @@ if __name__ == '__main__':
     # load json and create model
     # call the utils.py function load_OWG_json
     OWG = load_OWG_json(os.getcwd()+os.sep+weights_path)
+    print(OWG)
 
     # call the utils.py function get_and_tidy_df
     _, df = get_and_tidy_df(os.path.normpath(os.getcwd()), input_csv_file, image_direc, category)
+    print(df)
 
     # call the utils.py function im_gen_noaug    
     im_gen = im_gen_noaug(samplewise_std_normalization, samplewise_center)
+    print(im_gen)
 
     # call the utils.py function gen_from_def
     test_X, test_Y = gen_from_def(IMG_SIZE, df, image_direc, category, im_gen)
+    print(test_X)
+    print(test_Y)
 
     print ("[INFO] Predicting ...")     												    
     pred_Y = OWG.predict(test_X, batch_size = 128, verbose = True)

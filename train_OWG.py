@@ -30,12 +30,16 @@ from utils import *
 from tensorflow.keras.applications.mobilenet import MobileNet
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2
+from tensorflow.keras.applications.resnet_rs import ResNetRS101, ResNetRS200
 
 ## the original implementation used MobileNetV2
 ## however, for an unknown reason, keras implementation of MobileNetV2 in Tensorflow 2 is not giving the same result as in Tensorflow 1
 ## so below I have replaced MobileNetV2 with DenseNet201 which is comparable accuracy
-#from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 from tensorflow.keras.applications.densenet import DenseNet201
+
+# DJN
+from tensorflow.keras.applications import MobileNetV3Small, MobileNetV3Large
 
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout, Flatten, BatchNormalization
 from tensorflow.keras.models import Sequential
@@ -104,48 +108,8 @@ if __name__ == '__main__':
 	base_dir = os.path.normpath(os.getcwd()) 
 
 	## download files and unzip
-	if input_csv_file=='IR-training-dataset.csv':
-		print('Downloading IR imagery ...')
-		print('... file is ~2GB - takes a while')
-		url = 'https://drive.google.com/file/d/1rToH8sebTCptSv8vMSo-UToSy1Nm7KgI/view?usp=sharing'
-		image_dir = 'IR_images'+os.sep+'data'
-		if not os.path.isdir(os.path.join(base_dir,image_dir)):
-			file_id = '1rToH8sebTCptSv8vMSo-UToSy1Nm7KgI'
-			destination = 'IR_images.zip'
-			download_file_from_google_drive(file_id, destination)
-			print('download complete ... unzipping')	
-			zip_ref = zipfile.ZipFile(destination, 'r')
-			zip_ref.extractall(os.getcwd())
-			zip_ref.close()
-			os.remove(destination)
-	elif input_csv_file=='snap-training-dataset.csv':
-		print('Downloading nearshore imagery ...')
-		print('... file is ~421MB - takes a while')
-		url = 'https://drive.google.com/file/d/11xd3HWcfEE_yMYcSsr1StFFPSdXNAjKH/view?usp=sharing'
-		image_dir = 'snap_images'+os.sep+'data'
-		if not os.path.isdir(os.path.join(base_dir,image_dir)):
-			file_id = '11xd3HWcfEE_yMYcSsr1StFFPSdXNAjKH'
-			destination = 'snap_images.zip'
-			download_file_from_google_drive(file_id, destination)	
-			print('download complete ... unzipping')	
-			zip_ref = zipfile.ZipFile(destination, 'r')
-			zip_ref.extractall(os.getcwd())
-			zip_ref.close()
-			os.remove(destination)		
-	elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
-		print('Downloading nearshore oblique imagery ...')
-		print('... file is ~257MB - takes a while')
-		url = 'https://drive.google.com/file/d/1N2iaH7eD9msBPtqBUHJJrasInf9tICou/view?usp=sharing'		
-		image_dir = 'snap'+os.sep+'data'
-		if not os.path.isdir(os.path.join(base_dir,image_dir)):
-			file_id = '1N2iaH7eD9msBPtqBUHJJrasInf9tICou' 
-			destination = 'snap.zip'
-			download_file_from_google_drive(file_id, destination)	
-			print('download complete ... unzipping')	
-			zip_ref = zipfile.ZipFile(destination, 'r')
-			zip_ref.extractall(os.getcwd())
-			zip_ref.close()
-			os.remove(destination)	
+	if input_csv_file=='unk_c1_owg_oblique.csv':
+		image_dir = 'unk_c1'+os.sep+'data'
 
 	IMG_SIZE = (imsize, imsize) 
 
@@ -186,7 +150,7 @@ if __name__ == '__main__':
 								  fill_mode = fill_mode,
 								  zoom_range= zoom_range) 
 
-    # call the utils.py function gen_from_def            	
+	# call the utils.py function gen_from_def            	
 	train_X, train_Y = gen_from_def(IMG_SIZE, train_df, image_dir, category, im_gen)
 	test_X, test_Y = gen_from_def(IMG_SIZE, valid_df, image_dir, category, im_gen)
 	
@@ -201,7 +165,9 @@ if __name__ == '__main__':
 		## this is the original list of models
 		##archs = {'1':MobileNet, '2':MobileNetV2, '3':InceptionV3, '4':InceptionResNetV2}		
 		## however, for an unknown reason, keras implementation of MobileNetV2 in Tensoeflow 2 is not giving the same result as in Tensorflow 1, so below I have replaced MobileNetV2 with DenseNet201 which is comparable accuracy
-		archs = {'1':MobileNet, '2':DenseNet201, '3':InceptionV3, '4':InceptionResNetV2}
+		archs = {'1':ResNetRS101, '2':DenseNet201, '3':InceptionV3, '4':InceptionResNetV2, }
+        # DenseNet201 is good, ResNetRS101 is good. ResNetRS200 did not work well.
+		archs = {'1':ResNetRS101, '2':DenseNet201, '3':InceptionV3, '4':InceptionResNetV2, }
 		counter =1
 								
 		## loop through 4 different base models
@@ -217,7 +183,7 @@ if __name__ == '__main__':
 			model_checkpoint = ModelCheckpoint(weights_path, monitor='val_loss', verbose=1, 
 									 save_best_only=True, mode='min', save_weights_only = True)
 
-			reduceloss_plat = ReduceLROnPlateau(monitor='val_loss', factor=factor, patience=5, verbose=1, mode='auto', epsilon=epsilon, cooldown=5, min_lr=min_lr)
+			reduceloss_plat = ReduceLROnPlateau(monitor='val_loss', factor=factor, patience=5, verbose=1, mode='auto', min_delta=epsilon, cooldown=5, min_lr=min_lr)
 			earlystop = EarlyStopping(monitor="val_loss", mode="min", patience=25) 
 			callbacks_list = [model_checkpoint, earlystop, reduceloss_plat]	
 			
@@ -270,12 +236,8 @@ if __name__ == '__main__':
 			if category == 'H':			
 				ax1.set_xlabel('Actual H (m)')
 				ax1.set_ylabel('Predicted H (m)')
-				if input_csv_file=='IR-training-dataset.csv':										
-					plt.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_IR.png', dpi=300, bbox_inches='tight')
-				elif input_csv_file=='snap-training-dataset.csv':
-					plt.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_nearshore.png', dpi=300, bbox_inches='tight')			
-				elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
-					plt.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_oblique.png', dpi=300, bbox_inches='tight')						
+				if input_csv_file=='unk_c1_owg_oblique.csv':
+					plt.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_unk_c1_oblique.png', dpi=300, bbox_inches='tight')						
 			else:
 				ax1.set_xlabel('Actual T (s)')
 				ax1.set_ylabel('Predicted T (s)')
@@ -306,11 +268,7 @@ if __name__ == '__main__':
 			plt.xlabel('Epoch')
 			plt.legend(['train', 'test'], loc='upper left')
 
-			if input_csv_file=='IR-training-dataset.csv':													
-				outfile = os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+category+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_'+category+'_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'_loss_acc_curves_IR.png'
-			elif input_csv_file=='snap-training-dataset.csv':
-				outfile = os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+category+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_'+category+'_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'_loss_acc_curves_nearshore.png'	
-			elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
+			if input_csv_file=='unk_c1_owg_oblique.csv':
 				outfile = os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+category+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_'+category+'_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'_loss_acc_curves_oblique.png'					
 			plt.savefig(outfile, dpi=300, bbox_inches='tight')		
 			plt.close('all')
@@ -328,11 +286,7 @@ if __name__ == '__main__':
 			  c_ax.axis('off')
 
 			if category == 'H':	
-				if input_csv_file=='IR-training-dataset.csv':													
-					fig.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_IR.png', dpi=300, bbox_inches='tight')
-				elif input_csv_file=='snap-training-dataset.csv':
-					fig.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_nearshore.png', dpi=300, bbox_inches='tight')
-				elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
+				if input_csv_file=='unk_c1_owg_oblique.csv':
 					fig.savefig(os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'im'+str(IMG_SIZE[0])+'_waveheight_predictions_model'+str(counter)+'_'+str(num_epochs)+'epoch'+str(batch_size)+'batch_oblique.png', dpi=300, bbox_inches='tight')					
 			else:
 				if input_csv_file=='IR-training-dataset.csv':													

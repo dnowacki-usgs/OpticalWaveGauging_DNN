@@ -14,10 +14,11 @@
 import os, requests
 import numpy as np
 import pandas as pd
-from tensorflow.keras.metrics import mean_absolute_error
+# from tensorflow.keras.metrics import mean_absolute_error
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
 
 # get a keras image data generator with no augmentation
 # but scale the images according to samplewise_std_normalization and samplewise_center
@@ -58,6 +59,8 @@ def get_weights_path(input_csv_file, category, counter, imsize, batch_size, num_
 			weights_path=os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'waveheight_weights_model'+str(counter)+'_'+str(batch_size)+'batch.best.nearshore.hdf5'	
 		elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
 			weights_path=os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'waveheight_weights_model'+str(counter)+'_'+str(batch_size)+'batch.best.oblique.hdf5'						
+		elif input_csv_file=='unk_c1_owg_oblique.csv':
+			weights_path=os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'H'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'waveheight_weights_model'+str(counter)+'_'+str(batch_size)+'batch.best.unk_c1_oblique.hdf5'	
 	else:
 		if input_csv_file=='IR-training-dataset.csv':						
 			weights_path=os.getcwd()+os.sep+'im'+str(imsize)+os.sep+'res'+os.sep+str(num_epochs)+'epoch'+os.sep+'T'+os.sep+'model'+str(counter)+os.sep+'batch'+str(batch_size)+os.sep+'waveperiod_weights_model'+str(counter)+'_'+str(batch_size)+'batch.best.IR.hdf5'	
@@ -97,7 +100,10 @@ def get_and_tidy_df(base_dir, input_csv_file, image_dir, category):
 	elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
 		df['path'] = df['id'].map(lambda x: os.path.join(base_dir,
 		                                                image_dir,'{}'.format(x)))+".jpg"
-		
+	elif input_csv_file=='unk_c1_owg_oblique.csv':
+		df['path'] = df['id'].map(lambda x: os.path.join(base_dir,
+		                                                image_dir,'{}'.format(x)))
+                                                        
 	df = df.rename(index=str, columns={" H": "H", " T": "T"})   
 	
 	if category == 'H':
@@ -132,12 +138,19 @@ def get_and_tidy_df(base_dir, input_csv_file, image_dir, category):
 		new_df = df.groupby(['category']).apply(lambda x: x.sample(int(len(df)/2), replace = True)).reset_index(drop = True)
 	elif input_csv_file=='Nearshore-Training-Oblique-cam2-snap.csv':
 		new_df = df.groupby(['category']).apply(lambda x: x.sample(int(len(df)/2), replace = True)).reset_index(drop = True)
-		
+	elif input_csv_file=='unk_c1_owg_oblique.csv':
+		new_df = df.groupby(['category']).apply(lambda x: x.sample(int(len(df)/2), replace = True)).reset_index(drop = True)
 	return new_df, df
 
 # mean absolute error
+# DJN redefined to avoid error
+# def mae_metric(in_gt, in_pred):
+#     return mean_absolute_error(in_gt, in_pred)
+
 def mae_metric(in_gt, in_pred):
-    return mean_absolute_error(in_gt, in_pred)
+    in_gt = tf.cast(in_gt, in_pred.dtype)
+    return tf.reduce_mean(tf.abs(in_gt - in_pred))
+
 	
 # make a genrator from a dataframe	
 def gen_from_def(IMG_SIZE, df, image_dir, category, im_gen):

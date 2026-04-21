@@ -16,7 +16,7 @@ import sys, getopt, os
 import numpy as np 
 import json
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1' ##use CPU
+os.environ['CUDA_VISIBLE_DEVICES'] = '0' ##use CPU
 from utils import *
 
 #==============================================================	
@@ -67,6 +67,7 @@ if __name__ == '__main__':
                         samplewise_std_normalization, samplewise_center)
     print("====================================")
     print(category+' = '+str(pred_Y)[:5])
+    print(pred_Y)
     print("====================================")
 
 

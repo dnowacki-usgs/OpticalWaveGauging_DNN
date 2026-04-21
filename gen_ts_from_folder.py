@@ -23,11 +23,12 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdate
+import datetime as dt
 
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1' ##use CPU
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from utils import *   
 
 #==============================================================	
@@ -92,6 +93,7 @@ if __name__ == '__main__':
     V = OWG.predict(test_X, batch_size = 128, verbose = True)
     
     files  = sorted(glob(image_path+os.sep+'*.'+file_ext))
+    print(len(files))
     
     T = [file.split(os.sep)[-1].split('.')[0] for file in files]
 
@@ -101,7 +103,11 @@ if __name__ == '__main__':
      
     # interpolate onto a regular small timestamp
     df = df.sort_values('time')
+    
     x = np.arange(T.min(), T.max(),len(T)*5)
+    print(len(x))
+    print(len(T))
+    print(len(V))
     Vi = np.interp(x,T,V)
     
     # make a dataframe
@@ -112,10 +118,10 @@ if __name__ == '__main__':
     new_df = pd.DataFrame(data=d)
     
     # remove night-time hour samples (before 7am and after 7pm)
-    ind = np.where((new_df.dates.dt.hour<7) | (new_df.dates.dt.hour>19))[0]
+    # ind = np.where((new_df.dates.dt.hour<7) | (new_df.dates.dt.hour>19))[0]
 
-    new_df[category][ind] = np.nan
-    Vi[ind] = np.nan
+    #new_df[category][ind] = np.nan
+    #Vi[ind] = np.nan
     new_df[category+'_est'] = Vi
 
     # make a time-series plot showing actual and estimated
@@ -123,8 +129,9 @@ if __name__ == '__main__':
     n1 = 0; n2=130
     fig = plt.figure(figsize=(8,6))
     ax=plt.subplot(211)	
-    ax.plot_date(mdate.epoch2num(x)[n1:n2], new_df[category][n1:n2],'k', lw=2, label='Measured')
-    ax.plot_date(mdate.epoch2num(x)[n1:n2], Vi[n1:n2], 'b.-', lw=2, alpha=0.5, label='Estimated from Image')
+    x_num = [mdate.date2num(dt.datetime.utcfromtimestamp(t)) for t in x]
+    ax.plot_date(x_num[n1:n2], new_df[category][n1:n2],'k', lw=2, label='Measured')
+    ax.plot_date(x_num[n1:n2], Vi[n1:n2], 'b.-', lw=2, alpha=0.5, label='Estimated from Image')
     if category=='H':
        plt.ylabel(r'$H_s$ (m)')
     else:
@@ -140,8 +147,8 @@ if __name__ == '__main__':
     # for the whole time period   
     fig = plt.figure(figsize=(8,6))
     ax=plt.subplot(211)	
-    ax.plot_date(mdate.epoch2num(x), new_df[category],'k', lw=2, label='Measured')
-    ax.plot_date(mdate.epoch2num(x), Vi, 'b.-', lw=2, alpha=0.5, label='Estimated from Image')
+    ax.plot_date(x_num, new_df[category],'k', lw=2, label='Measured')
+    ax.plot_date(x_num, Vi, 'b.-', lw=2, alpha=0.5, label='Estimated from Image')
     if category=='H':
        plt.ylabel(r'$H_s$ (m)')
     else:
