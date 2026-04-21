@@ -1,4 +1,4 @@
-name: owg
+name: owg-tf27
 channels:
   - conda-forge
 dependencies:  
@@ -15,4 +15,4 @@ dependencies:
   - scikit-image
   - scikit-learn
   - requests
-  - tensorflow-gpu=2.6
+  - tensorflow-gpu==2.7

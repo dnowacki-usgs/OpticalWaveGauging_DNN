@@ -1,11 +1,11 @@
 {
   "samplewise_std_normalization" : true,
   "samplewise_center"  : true,
-  "weights_path" : "im128/res/200epoch/T/model1/batch16/waveperiod_weights_model1_16batch.best.nearshore.hdf5",
-  "input_csv_file"     : "snap-training-dataset.csv", 
-  "category"           : "T",
+  "weights_path" : "im128/res/100epoch/H/model1/batch128/waveheight_weights_model1_128batch.best.unk_c1_oblique.hdf5",
+  "input_csv_file"     : "unk_c1_owg_oblique.csv", 
+  "category"           : "H",
   "im_size"            : 128,
-  "image_direc"        : "snap_images/data",
+  "image_direc"        : "unk_c1/data",
   "prc_lower_withheld": 0,
   "prc_upper_withheld": 0,
   "file_ext": "jpg"  

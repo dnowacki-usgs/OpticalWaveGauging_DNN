@@ -1,4 +1,4 @@
-name: owg
+name: owg-tf211
 channels:
   - conda-forge
 dependencies:  
@@ -9,10 +9,10 @@ dependencies:
   - matplotlib
   - imageio
   - h5py
-  - pandas
+  - pandas=2
   - pip
   - mkl-service
   - scikit-image
   - scikit-learn
   - requests
-  - tensorflow-gpu=2.6
+  - tensorflow-gpu=2.11
